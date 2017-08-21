@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1481391344 source:c:\users\ondrej\desktop\zadanie 3.turbo\main.c
+	<stdio.h>
+	<stdlib.h>
+	<limits.h>
+

@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1481411675 source:c:\users\ondrej\desktop\zadanie 3.nitro\main.c
+	<stdio.h>
+	<stdlib.h>
+	<limits.h>
+

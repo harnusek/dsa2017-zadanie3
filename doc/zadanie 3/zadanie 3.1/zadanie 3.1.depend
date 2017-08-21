@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1481199235 source:c:\users\ondrej\desktop\zadanie 3.1\main.c
+	<stdio.h>
+	<stdlib.h>
+	<limits.h>
+	<string.h>
+
