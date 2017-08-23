@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1503526191 source:c:\users\ondrej\documents\github\dsa2017-zadanie3\minhalda\main.c
+	<stdio.h>
+	<stdlib.h>
+
