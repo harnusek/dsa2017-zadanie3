@@ -27,7 +27,8 @@ typedef struct queueNode                     // zaznam
     unsigned int p:1;
     unsigned int q:1;
     unsigned int r:1;
-    unsigned int priority;
+    unsigned int teleported:1;
+    unsigned int priority:31;
 }QUEUE_NODE;
 typedef struct teleport                     // zaznam
 {
@@ -217,7 +218,6 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
     {
         tab[d][p][q][r][y][x].time = newTime;
         tab[d][p][q][r][y][x].previous = from;
-        //printf("relax:[%d,%d]=%d\t\t{%d,%d,%d,%d}\n",x,y,newTime,d,p,q,r);
         QUEUE_NODE neigh;
         neigh.x = x;
         neigh.y = y;
@@ -226,11 +226,12 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
         neigh.q = q;
         neigh.r = r;
         neigh.priority = newTime;
+        neigh.teleported = FALSE;
         pushQ(neigh);
     }
-    if(d == TRUE /*&& p == TRUE && q == TRUE && r == TRUE*/)
+    if(d == TRUE && p == TRUE && q == TRUE && r == TRUE)
     {
-        //printf("Nasiel princezne!\n");
+        //printf("Nasiel princezne [%d,%d]!\n",x,y);
         return &tab[d][p][q][r][y][x];
     }
     return NULL;
@@ -246,13 +247,13 @@ void visitTeleports(VERTEX* from, QUEUE_NODE node, VERTEX tab[2][2][2][2][height
     {
         node.x = tele->x;
         node.y = tele->y;
+        node.teleported = TRUE;
         if(tab[node.d][node.p][node.q][node.r][node.y][node.x].isVisited == FALSE)
         {
             tab[node.d][node.p][node.q][node.r][node.y][node.x].time = node.priority;
             tab[node.d][node.p][node.q][node.r][node.y][node.x].previous = from;
             pushQ(node);
         }
-    //printf("[%d,%d]\n",node.x,node.y);
         tele = tele->next;
     }
 }
@@ -286,19 +287,16 @@ int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][height][width], int *pa
     q = min.q;
     r = min.r;
     if(tab[d][p][q][r][y][x].isVisited == TRUE)  //je uz navstiveny     //je to dobre?
-    {
-        printf("REPETE: [%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
+    {   printf("REPETE: [%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
         return NULL;
     }
     tab[d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENE POLICKO
     VERTEX *final, *from = &tab[d][p][q][r][y][x];
-    //navsteva teleportov
-    if(map[y][x]>='0' && map[y][x]<='9')
+    if(min.teleported == FALSE && map[y][x]>='0' && map[y][x]<='9')//NASIEL SOM TELEPORT
     {
-        visitTeleports(from,min,tab);
+        //visitTeleports(from,min,tab);
     }
-    //NASIEL SOM DRAKA
-    if(map[y][x] == 'D' && d == FALSE)
+    else if(map[y][x] == 'D' && d == FALSE)//NASIEL SOM DRAKA
     {
         queueCount = 0;
         d = TRUE;
@@ -317,8 +315,7 @@ int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][height][width], int *pa
 void terminate(VERTEX tab[2][2][2][2][height][width])
 {
     printMap();
-    printSimpleTab(tab,0,0,0,0);
-    //printSimpleTab(tab,1,0,0,0);
+    //printSimpleTab(tab,0,0,0,0);
     //printTeleports();
     free(queue);//Uvolnenie pamate
     int i;
@@ -344,7 +341,7 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
 
     QUEUE_NODE min;
     VERTEX tab[2][2][2][2][height][width];
-    int i, *path = NULL;
+    int *path = NULL;
     initialize(tab);
     printMap();
     while(path==NULL)
@@ -454,21 +451,49 @@ int testQ()
     free(queue);
     return 0;
 }
+int testPath()
+{
+    int width=50, height=40;
+    int time;
+    int index, scenario = 1; //to 6
+    FILE *fp;
+    int i,j,c;
+    fp = fopen("maps.txt","r");
+
+    for(index=0; index<6; index++)
+    {
+        fscanf(fp,"%d %d %d",&height, &width, &time);
+        char map[height][width];
+        fgetc(fp);
+        for(i=0; i<height;i++)
+        {
+            for(j=0; j<width; j++)
+            {
+                //c = fgetc(fp);
+                fscanf(fp,"%c ",&c);
+                printf("%c ", c);
+            }
+            printf("\n");
+        }
+    }
+    fclose(fp);
+    return 0;
+}
 int testDijkstra()
 {
     int dlzka_cesty;
 
     int n=10, m=15, t=0;
     char map[10][15] = {
-                        {'C', 'C', 'H', 'H', 'H', 'P', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
+                        {'C', 'C', 'H', 'H', 'H', 'P', 'H', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C'},
                         {'C', 'C', 'C', '1', 'H', 'C', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
                         {'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C'},
+                        {'C', 'C', 'C', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'D', 'H', 'C', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C'},
                         {'1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'H', 'H', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', '1', 'C', 'C'},
-                        {'C', 'C', 'C', 'P', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'D'},
+                        {'C', 'C', 'C', 'H', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'}
                         };
     char * mapa[10] = { map[0], map[1], map[2], map[3], map[4], map[5], map[6], map[7], map[8], map[9]};
@@ -488,7 +513,7 @@ int main()
     else
         printf("Implementacia prioritnej haldy OK!\n");
 
-    if(testDijkstra())
+    if(testPath())
         printf("Chybna implementacia dijkstrovho algoritmu!\n");
     else
         printf("Implementacia dijkstrovho algoritmu OK!\n");
