@@ -8,26 +8,33 @@
 #define LEFT(i) (2*i + 1)
 #define RIGHT(i) (2*i + 2)
 int QUEUE_SIZE = 30;
-//Struktura objektu
-typedef struct object
+typedef struct node                     // zaznam o vrchole v grafe
 {
-    int cost;
-}OBJECT;
+    unsigned int x:13;
+    unsigned int y:13;
+    unsigned int d:1;
+    unsigned int p:1;
+    unsigned int q:1;
+    unsigned int r:1;
+    unsigned int isVisited:1;
+    unsigned int time;
+    struct node* previous;
+}NODE;
 
 //Min halda
 int queueCount=0;
-OBJECT *queue;
+NODE *queue;
 
 //Inicializacia premennych
-void init()
+void initQ()
 {
-    queue = (OBJECT*)calloc(sizeof(OBJECT),QUEUE_SIZE);    //min halda
+    queue = (NODE*)calloc(sizeof(NODE),QUEUE_SIZE);    //min halda
     queueCount=0;
 }
 //Vymenni obsah premennych
-void swap(OBJECT *p1, OBJECT *p2)
+void swapQ(NODE *p1, NODE *p2)
 {
-    OBJECT temp = *p1;
+    NODE temp = *p1;
     *p1 = *p2;
     *p2 = temp;
 }
@@ -40,14 +47,14 @@ void heapifyQ(int i)
         index=temp;
         if (LEFT(index) < queueCount)
         {
-            if((queue[LEFT(index)].cost) < (queue[index]).cost)
+            if((queue[LEFT(index)].time) < (queue[index]).time)
             {
                 temp = LEFT(index);
             }
         }
         if (RIGHT(index) < queueCount)
         {
-            if((queue[RIGHT(index)].cost) < (queue[temp]).cost)
+            if((queue[RIGHT(index)].time) < (queue[temp]).time)
             {
                 temp = RIGHT(index);
             }
@@ -55,12 +62,12 @@ void heapifyQ(int i)
 
         if (index != temp)
         {
-            swap(&queue[index], &queue[temp]);
+            swapQ(&queue[index], &queue[temp]);
         }
     } while(temp != index);
 }
 //Vlozi prvok d haldy
-void pushQ(OBJECT o)
+void pushQ(NODE o)
 {
     queue[queueCount] = o;
     queueCount++;
@@ -69,9 +76,9 @@ void pushQ(OBJECT o)
 
     while (index>0)
     {
-        if( (queue[PARENT(index)].cost) > (queue[index]).cost)
+        if( (queue[PARENT(index)].time) > (queue[index]).time)
         {
-            swap(&queue[index], &queue[PARENT(index)]);
+            swapQ(&queue[index], &queue[PARENT(index)]);
             index = PARENT(index);
         }
         else
@@ -81,9 +88,9 @@ void pushQ(OBJECT o)
     }
 }
 //Vrati koren haldy
-OBJECT popQ()
+NODE popQ()
 {
-    OBJECT minimum = queue[0];
+    NODE minimum = queue[0];
     if (queueCount == 1)
     {
         queueCount--;
@@ -102,7 +109,7 @@ void printQ()
     int i;
     printf("MIN:%d    ",queueCount);
     for(i=0; i<queueCount; i++)
-        printf("%d, ",(queue[i]).cost);
+        printf("%d, ",(queue[i]).time);
     printf("\n");
 }
 int randomize(int seed) {return (unsigned int)((seed * 1103515245 +12345) / 65536) % 139;}
@@ -111,20 +118,20 @@ int cmpfunc (const void * a, const void * b){return ( *(int*)a - *(int*)b );}
 int testQ()
 {
     QUEUE_SIZE=1000;
-    init();
+    initQ();
     int i, arr[QUEUE_SIZE];
-    OBJECT o;
+    NODE o;
 
     for(i=0; i<QUEUE_SIZE; i++)
     {
-        o.cost = arr[i] = randomize(i);
+        o.time = arr[i] = randomize(i);
         pushQ(o);
     }
     qsort(arr, QUEUE_SIZE, sizeof(int), cmpfunc);
     for(i=0; i<QUEUE_SIZE; i++)
     {
-       // printf("q = %d\tarr = %d\n",popQ().cost , arr[i]);
-        if(popQ().cost != arr[i])
+       // printf("q = %d\tarr = %d\n",popQ().time , arr[i]);
+        if(popQ().time != arr[i])
             return 1;
     }
     return 0;
