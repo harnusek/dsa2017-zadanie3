@@ -199,19 +199,7 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
     {
         return NULL;
     }
-    //Popolvar logic
-    /*if(p == TRUE || q == TRUE || r == TRUE)
-    {
-        printf("Nasiel princeznu!\n");
-        return &tab[d][p][q][r][y][x];
-    }
-
-    if(map[y][x] == 'D')
-    {
-        queueCount = 0;
-        d = TRUE;
-    }
-    else if(d == TRUE && map[y][x] == 'P')
+    if(d == TRUE && map[y][x] == 'P')
     {
         p = TRUE;
     }
@@ -222,7 +210,7 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
     else if(d == TRUE && map[y][x] == 'R')
     {
         r = TRUE;
-    }*/
+    }
     //Relaxacia
     int newTime = from->time + getTime(map[y][x]);
     if(newTime < tab[d][p][q][r][y][x].time)
@@ -240,8 +228,9 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
         neigh.priority = newTime;
         pushQ(neigh);
     }
-    if(map[y][x] == 'D')
+    if(d == TRUE /*&& p == TRUE && q == TRUE && r == TRUE*/)
     {
+        //printf("Nasiel princezne!\n");
         return &tab[d][p][q][r][y][x];
     }
     return NULL;
@@ -262,16 +251,29 @@ void visitTeleports(VERTEX* from, QUEUE_NODE node, VERTEX tab[2][2][2][2][height
             tab[node.d][node.p][node.q][node.r][node.y][node.x].time = node.priority;
             tab[node.d][node.p][node.q][node.r][node.y][node.x].previous = from;
             pushQ(node);
-            printf("[%d,%d]\n",node.x,node.y);
         }
-        else
-        {
-                printf("NOT \n");
-        }
-
     //printf("[%d,%d]\n",node.x,node.y);
         tele = tele->next;
     }
+}
+/** Vygeneruje cestu*/
+int *generatePath(VERTEX *final, int *pathSize)
+{
+    int i,*path;
+    VERTEX *v = final;
+    *pathSize = 0;
+    while(v!=NULL)
+    {
+        (*pathSize)++;          map[v->y][v->x] = '.';
+        v = v->previous;
+    }
+    path = ((int*)malloc(2*(*pathSize)*sizeof(int)));
+    for(i=(*pathSize)-1; i>=0; --i){
+        path[i*2] = final->x;
+        path[i*2+1] = final->y;
+        final = final->previous;
+    }
+    return path;
 }
 /**Navstivenie vrcholu*/
 int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][height][width], int *pathSize)
@@ -288,38 +290,26 @@ int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][height][width], int *pa
         printf("REPETE: [%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
         return NULL;
     }
-    tab[d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENY
+    tab[d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENE POLICKO
     VERTEX *final, *from = &tab[d][p][q][r][y][x];
     //navsteva teleportov
     if(map[y][x]>='0' && map[y][x]<='9')
     {
-        //visitTeleports(from,min,tab);
+        visitTeleports(from,min,tab);
+    }
+    //NASIEL SOM DRAKA
+    if(map[y][x] == 'D' && d == FALSE)
+    {
+        queueCount = 0;
+        d = TRUE;
     }
     //relaxacia susedov
     for(i=0; i<2; i++)
     {
         final = relaxVertex(from, y+shift[i],x,d,p,q,r,tab);
-        if(final != NULL) break;
+        if(final != NULL) return generatePath(final, pathSize);
         final = relaxVertex(from, y,x+shift[i],d,p,q,r,tab);
-        if(final != NULL) break;
-    }
-    //vratenie cesty
-    if(final != NULL)
-    {
-        VERTEX *v = final;
-        *pathSize = 0;
-        while(v!=NULL)
-        {
-            (*pathSize)++;          map[v->y][v->x] = '.';
-            v = v->previous;
-        }
-        int i,*path = ((int*)malloc(2*(*pathSize)*sizeof(int)));
-        for(i=0;i<(*pathSize);++i){
-            path[i*2] = final->x;
-            path[i*2+1] = final->y;
-            final = final->previous;
-        }
-        return path;
+        if(final != NULL) return generatePath(final, pathSize);
     }
     return NULL;
 }
@@ -328,6 +318,7 @@ void terminate(VERTEX tab[2][2][2][2][height][width])
 {
     printMap();
     printSimpleTab(tab,0,0,0,0);
+    //printSimpleTab(tab,1,0,0,0);
     //printTeleports();
     free(queue);//Uvolnenie pamate
     int i;
@@ -355,7 +346,7 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
     VERTEX tab[2][2][2][2][height][width];
     int i, *path = NULL;
     initialize(tab);
-
+    printMap();
     while(path==NULL)
     {
         if(queueCount==0)
@@ -364,7 +355,6 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
             break;
         }
         min = popQ();
-        //printf("pop:[%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
         path = visitVertex(min,tab,dlzka_cesty);
     }
     terminate(tab);
@@ -470,23 +460,23 @@ int testDijkstra()
 
     int n=10, m=15, t=0;
     char map[10][15] = {
-                        {'C', 'C', 'H', 'H', 'H', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
+                        {'C', 'C', 'H', 'H', 'H', 'P', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
                         {'C', 'C', 'C', '1', 'H', 'C', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
+                        {'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C'},
-                        {'1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'P', 'C', 'C', 'H', 'H', 'C'},
+                        {'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C'},
+                        {'1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'H', 'H', 'C'},
                         {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', '1', 'C', 'C'},
-                        {'C', 'C', 'C', 'P', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'D'}
+                        {'C', 'C', 'C', 'P', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'D'},
+                        {'C', 'C', 'C', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'}
                         };
     char * mapa[10] = { map[0], map[1], map[2], map[3], map[4], map[5], map[6], map[7], map[8], map[9]};
     //printf("size = %dB\n",sizeof(NODE));
     int i, *cesta = zachran_princezne(mapa, n, m, t, &dlzka_cesty);
     if(cesta==NULL) return 1;
     for(i=0;i<dlzka_cesty;++i){
-            //printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
+            printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
     }
     return 0;
 }
