@@ -3,53 +3,48 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
+#define TIME_MAX 1023
 #define TRUE 1
 #define FALSE 0
 #define PARENT(i) ((i-1)/2)
 #define LEFT(i) (2*i + 1)
 #define RIGHT(i) (2*i + 2)
-
+const char GENERATOR='G', DRAGON='D',FIRST_PRINCESS ='P', SECOND_PRINCESS='Q', THIRD_PRINCESS='R';
+const char SIMPLE_PATH='C', DOUBLE_PATH='H',NO_PATH ='N';
 typedef struct vertex                     // zaznam
 {
-    unsigned int x:16;
-    unsigned int y:16;
+    unsigned int x:10;
+    unsigned int y:10;
     unsigned int isVisited:1;
-    unsigned int time:31;
+    unsigned int time:10;
     struct vertex* previous;
 }VERTEX;
 typedef struct queueNode                     // zaznam
 {
-    unsigned int x:13;
-    unsigned int y:13;
+    unsigned int x:10;
+    unsigned int y:10;
     unsigned int g:1;
     unsigned int d:1;
     unsigned int p:1;
     unsigned int q:1;
     unsigned int r:1;
     unsigned int teleported:1;
-    unsigned int priority:31;
+    unsigned int priority:10;
 }QUEUE_NODE;
 typedef struct teleport                     // zaznam
 {
-    unsigned int x:16;
-    unsigned int y:16;
+    unsigned int x:10;
+    unsigned int y:10;
     struct teleport* next;
 }TELEPORT;
 
 int width = 0, height = 0;      // rozmery mapy
 char **map = NULL;              // mapa
 int queueCount = 0;             // pocet prvkov radu
-QUEUE_NODE *queue = NULL;              // prioritny rad
+QUEUE_NODE *queue = NULL;       // prioritny rad
 TELEPORT *teleports[10];
 
 //**PRIORITY QUEUE**
-/**Inicializacia premennych*/
-void initQ(int queueSize)
-{
-    queue = (QUEUE_NODE*)calloc(sizeof(QUEUE_NODE),queueSize);    //min halda
-    queueCount=0;
-}
 /**Vymenni obsah premennych*/
 void swapQ(QUEUE_NODE *p1, QUEUE_NODE *p2)
 {
@@ -92,7 +87,6 @@ void pushQ(QUEUE_NODE o)
     queueCount++;
 
     int index = queueCount - 1;
-
     while (index>0)
     {
         if( (queue[PARENT(index)].priority) > (queue[index]).priority)
@@ -126,11 +120,11 @@ QUEUE_NODE popQ()
 /**Vrati cas prechodu daneho policka*/
 int getTime(char box)
 {
-    if(box == 'C' || box == 'D' || box == 'P' || box == 'Q' || box == 'R' || box == 'G')
+    if(box == SIMPLE_PATH || box == DRAGON || box == FIRST_PRINCESS || box == SECOND_PRINCESS || box == THIRD_PRINCESS || box == GENERATOR)
         return 1;
     else if(box >= '0' && box <= '9')
         return 1;
-    else if(box == 'H')
+    else if(box == DOUBLE_PATH)
         return 2;
     else
         return -666;
@@ -148,13 +142,13 @@ void initialize(VERTEX tab[2][2][2][2][2][height][width])
                         for(y=0; y<height; y++)
                             for(x=0; x<width; x++)
                             {
-                                tab[g][d][p][q][r][y][x].time = INT_MAX;
+                                tab[g][d][p][q][r][y][x].time = TIME_MAX;
                                 tab[g][d][p][q][r][y][x].isVisited = FALSE;
                                 tab[g][d][p][q][r][y][x].x = x;
                                 tab[g][d][p][q][r][y][x].y = y;
                             }
 //min halda
-    queue = (QUEUE_NODE*)calloc(sizeof(QUEUE_NODE),16*height*width*sizeof(QUEUE_NODE));
+    queue = (QUEUE_NODE*)calloc(sizeof(QUEUE_NODE),32*height*width*sizeof(QUEUE_NODE));
     queueCount=0;
     QUEUE_NODE src;
     src.d = src.p = src.q = src.r = src.x = src.y = 0;
@@ -170,7 +164,7 @@ void initialize(VERTEX tab[2][2][2][2][2][height][width])
         for(x=0; x<width; x++)
         {
             character = map[y][x]-'0';
-            if(map[y][x]=='P')//princezna
+            if(map[y][x]==FIRST_PRINCESS)//princezna
             {
                 map[y][x]+=index;
                 index++;
@@ -193,31 +187,17 @@ void initialize(VERTEX tab[2][2][2][2][2][height][width])
 /**Relaxacia suseda*/
 VERTEX* relaxVertex(VERTEX* from, int y, int x, int g, int d, int p, int q, int r, VERTEX tab[2][2][2][2][2][height][width])
 {
-    if((y>=height) || (y<0) || (x>=width) || (x<0))//hranice
+    if(y>=height || y<0 || x>=width || x<0
+        || tab[g][d][p][q][r][y][x].isVisited == TRUE || map[y][x]==NO_PATH)//no go
     {
         return NULL;
     }
-    if(tab[g][d][p][q][r][y][x].isVisited == TRUE || map[y][x]=='N')//no go
-    {
-        return NULL;
-    }
-    if(map[y][x] == 'G')
-    {
-        g = TRUE;
-    }
-    if(d == TRUE && map[y][x] == 'P')
-    {
-        p = TRUE;
-    }
-    else if(d == TRUE && map[y][x] == 'Q')
-    {
-        q = TRUE;
-    }
-    else if(d == TRUE && map[y][x] == 'R')
-    {
-        r = TRUE;
-    }
-    //Relaxacia
+//Rozhodovanie popolvara
+    if(map[y][x] == GENERATOR) g = TRUE;
+    else if(d == TRUE && map[y][x] == FIRST_PRINCESS) p = TRUE;
+    else if(d == TRUE && map[y][x] == SECOND_PRINCESS) q = TRUE;
+    else if(d == TRUE && map[y][x] == THIRD_PRINCESS) r = TRUE;
+//Relaxacia
     int newTime = from->time + getTime(map[y][x]);
     if(newTime < tab[g][d][p][q][r][y][x].time)
     {
@@ -237,7 +217,6 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int g, int d, int p, int q, int 
     }
     if(d == TRUE && p == TRUE && q == TRUE && r == TRUE)
     {
-        //printf("Nasiel princezne [%d,%d]!\n",x,y);
         return &tab[g][d][p][q][r][y][x];
     }
     return NULL;
@@ -272,7 +251,7 @@ int *generatePath(VERTEX *final, int *pathSize)
     //printf("TIME: %d\n",final->time);
     while(v!=NULL)
     {
-        (*pathSize)++;          map[v->y][v->x] = '.';
+        (*pathSize)++;
         v = v->previous;
     }
     path = ((int*)malloc(2*(*pathSize)*sizeof(int)));
@@ -286,25 +265,26 @@ int *generatePath(VERTEX *final, int *pathSize)
 /**Navstivenie vrcholu*/
 int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][2][height][width], int *pathSize)
 {
-    int x,y,g,d,p,q,r,i,shift[]={-1,1};
-    x = min.x;
-    y = min.y;
-    g = min.g;
-    d = min.d;
-    p = min.p;
-    q = min.q;
-    r = min.r;
-    if(tab[g][d][p][q][r][y][x].isVisited == TRUE)  //je uz navstiveny     //je to dobre?
-    {   printf("REPETE: [%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
+    int x = min.x;
+    int y = min.y;
+    int g = min.g;
+    int d = min.d;
+    int p = min.p;
+    int q = min.q;
+    int r = min.r;
+    if(tab[g][d][p][q][r][y][x].isVisited == TRUE)  //je uz navstiveny
+    {
         return NULL;
     }
     tab[g][d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENE POLICKO
+
+    int i,shift[]={-1,1};
     VERTEX *final, *from = &tab[g][d][p][q][r][y][x];
     if(g == TRUE && min.teleported == FALSE && map[y][x]>='0' && map[y][x]<='9')//NASIEL SOM TELEPORT
     {
         visitTeleports(from,min,tab);
     }
-    else if(map[y][x] == 'D' && d == FALSE)//NASIEL SOM DRAKA
+    else if(map[y][x] == DRAGON && d == FALSE)//NASIEL SOM DRAKA
     {
         //queueCount = 0;
         d = TRUE;
@@ -322,10 +302,7 @@ int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][2][height][width], int 
 /** Uvolnenie globalnych premennych*/
 void terminate(VERTEX tab[2][2][2][2][2][height][width])
 {
-    //printMap();
-    //printSimpleTab(tab,0,0,0,0);
-    //printTeleports();
-    free(queue);//Uvolnenie pamate
+    free(queue);//rad
     int i;
     TELEPORT *del = NULL, *temp = NULL;
     for(i=0; i<10; i++)
@@ -336,29 +313,25 @@ void terminate(VERTEX tab[2][2][2][2][2][height][width])
         {
             del = temp;
             temp = temp->next;
-            free(del);
+            free(del);//teleport
         }
     }
 }
-/** Upraveny dijkstrov algoritmus vrati najkratsiu cestu*/
+/** Dijkstrov algoritmus s prioritnym radom*/
 int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
 {
-    width = m;                  // sirka
-    height = n;                 // vyska
-    map = mapa;                 // mapa
+    width = m;
+    height = n;
+    map = mapa;
 
     QUEUE_NODE min;
-    VERTEX tab[2][2][2][2][2][height][width];
+    VERTEX tab[2][2][2][2][2][height][width];//stavovy priestor
     int *path = NULL;
     initialize(tab);
-    //printMap();
+
     while(path==NULL)
     {
-        if(queueCount==0)
-        {
-            printf("Popolvar nema riesenie!\n");
-            break;
-        }
+        if(queueCount==0) break; //Popolvar nema riesenie
         min = popQ();
         path = visitVertex(min,tab,dlzka_cesty);
     }
@@ -366,80 +339,15 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
     return path;
 }
 //**TEST**
-void printSimpleTab(VERTEX tab[2][2][2][2][2][height][width], int a, int b, int c, int d, int e)    // VYTLACI TABULKU
-{
-    int x,y;
-
-    for(y=0; y<height; y++)
-    {// vyska
-        for(x=0; x<width; x++)
-        {// sirka
-            (tab[a][b][c][d][e][y][x].time == INT_MAX)? printf("OO ") : printf("%2d ",tab[a][b][c][d][e][y][x].time );
-            //printf("'%d' ",tab[a][b][c][d][e][y][x].isVisited);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-void printCameFrom(VERTEX tab[2][2][2][2][2][height][width])    // VYTLACI TABULKU
-{
-    int x,y;
-    VERTEX *previous = NULL;
-    for(y=0; y<height; y++)
-    {// vyska
-        for(x=0; x<width; x++)
-        {// sirka
-            previous = tab[0][0][0][0][0][y][x].previous;
-            (previous == NULL)? printf("[ NULL] ") : printf("[%2d,%2d] ",previous->x,previous->y);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-void printMap()                                                                         // VYTLACI MAPU
-{
-    int i,j;
-
-    printf("\nwidth=%d height=%d\n",width, height);
-    for(i=0; i<height; i++)
-    {
-        for(j=0; j<width; j++)
-            printf("%c ",map[i][j]);
-
-        printf("\n");
-    }
-    printf("\n");
-}
-void printTeleports()                                                                         // VYTLACI TELEPORTY
-{
-    int i;
-    TELEPORT *node = NULL;
-    for(i=0; i<10; i++)
-    {
-        printf("TEL_%d = ",i);
-        node = teleports[i];
-        while(node!=NULL)
-        {
-            printf("[%d,%d]",node->x,node->y);
-            node = node->next;
-        }
-        printf("\n");
-    }
-}
-void printQ()
-{
-    int i;
-    printf("MIN:%d    ",queueCount);
-    for(i=0; i<queueCount; i++)
-        printf("%d, ",(queue[i]).priority);
-    printf("\n");
-}
 int randomize(int seed) {return (unsigned int)((seed * 1103515245 +12345) / 65536) % 139;}
 int cmpfunc (const void * a, const void * b){return ( *(int*)a - *(int*)b );}
+/** Otestovanie prioritneho radu*/
 int testQ()
 {
+/** Otestovanie na danej mape*/
     int size=100;
-    initQ(size);
+    queue = (QUEUE_NODE*)calloc(sizeof(QUEUE_NODE),size);    //min halda
+    queueCount=0;
     int i, temp, arr[size];
     QUEUE_NODE o;
 
@@ -459,76 +367,79 @@ int testQ()
     free(queue);
     return 0;
 }
-int testPath()
+int testMap(char **mapa, int n, int m, int t)
 {
-    int SIZE = 6;
-    int width, height;
-    int time,i,j,c;
-    int index, scenario = 0; //0 to 5
-    FILE *fp;
-    int dlzka_cesty;
+    int generatorWork = FALSE, teleported = FALSE;
+    int i, x, y;
+    int timePath=0, *dlzka_cesty;
+    int *cesta = zachran_princezne(mapa, n, m, -1, &dlzka_cesty);
 
-    fp = fopen("maps.txt","r");
-
-    for(index=0; index<SIZE; index++)
+    if(cesta==NULL) return 1;
+    for(i=0;i<dlzka_cesty;++i)
     {
+        x = cesta[i*2];
+        y = cesta[i*2+1];
+        if(map[y][x]>='0' && map[y][x]<='9')
+        {
+             if(teleported)
+             {
+                 teleported = FALSE;
+                 timePath-=getTime(map[y][x]);
+             }
+             else teleported = TRUE;
+         }
+         timePath+=getTime(map[y][x]);
+    }
+    if(t == timePath) return 0; //Je to optimalna cesta?
+    //TLAC
+    printf("[%d,%d] optim.time=%d / my.time=%d\n",n, m, t,timePath);
+    int j;
+    for(i=0;i<dlzka_cesty;++i)
+    {
+        printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
+        map[cesta[i*2+1]][cesta[i*2]] = '.';
+    }
+    for(i=0; i<height; i++)
+    {
+        for(j=0; j<width; j++)
+            printf("%c ",map[i][j]);
+
+        printf("\n");
+    }
+    printf("\n");
+    return 1;
+}
+/** Otestovanie algritmu popolvara*/
+int test()
+{
+    int COUNT = 3;
+    int width, height;
+    int time,i,j,c,index;
+    FILE *fp = fopen("maps.txt","r");
+
+    for(index=0; index<COUNT; index++)
+    {
+        //nacitaj
         fscanf(fp,"%d %d %d",&height, &width, &time);
         char map[height][width];
         fgetc(fp);
         for(i=0; i<height;i++)
-        {
             for(j=0; j<width; j++)
             {
                 fscanf(fp,"%c ",&c);
-                if(isalpha(c))
-                    map[i][j] = c -32;
-                else
-                    map[i][j] = c;
+                map[i][j] = c;
             }
-        }
-
-        if(index == scenario)
+        char * mapa[height];
+        for(i=0; i<height;i++)
+            mapa[i] = map[i];
+        //otestuj
+        if(testMap(mapa, height, width, time))
         {
-            printf("%d %d %d\n",height, width, time);
-            char * mapa[height];
-            for(i=0; i<height;i++)
-            {
-                mapa[i] = map[i];
-            }
-            int *cesta = zachran_princezne(mapa, height, width, -1, &dlzka_cesty);
-            if(cesta==NULL) return 1;
-            for(i=0;i<dlzka_cesty;++i){
-                    printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
-            }
+            fclose(fp);
+            return 1;
         }
     }
     fclose(fp);
-    return 0;
-}
-int testDijkstra()
-{
-    int dlzka_cesty;
-
-    int n=10, m=15, t=0;
-    char map[10][15] = {
-                        {'C', 'C', 'H', 'H', 'H', 'P', 'H', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C'},
-                        {'C', 'C', 'C', '1', 'H', 'C', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C', 'C', 'C', 'C', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'C', 'D', 'H', 'C', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'C', 'C', 'C', 'H', 'H', 'C'},
-                        {'1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'H', 'C', 'C', 'H', 'H', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', '1', 'C', 'C'},
-                        {'C', 'C', 'C', 'H', '1', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'},
-                        {'C', 'C', 'C', 'C', 'C', 'C', 'P', 'C', 'C', 'C', 'C', 'C', 'C', 'N', 'C'}
-                        };
-    char * mapa[10] = { map[0], map[1], map[2], map[3], map[4], map[5], map[6], map[7], map[8], map[9]};
-    //printf("size = %dB\n",sizeof(NODE));
-    int i, *cesta = zachran_princezne(mapa, n, m, t, &dlzka_cesty);
-    if(cesta==NULL) return 1;
-    for(i=0;i<dlzka_cesty;++i){
-            printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
-    }
     return 0;
 }
 /**Hlavna funkcia*/
@@ -539,10 +450,10 @@ int main()
     else
         printf("Implementacia prioritnej haldy OK!\n");
 
-    if(testPath())
-        printf("Chybna implementacia dijkstrovho algoritmu!\n");
+    if(test())
+        printf("Chybna implementacia algoritmu!\n");
     else
-        printf("Implementacia dijkstrovho algoritmu OK!\n");
+        printf("Implementacia algoritmu OK!\n");
 
     return 0;
 }
