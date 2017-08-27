@@ -263,6 +263,7 @@ int *generatePath(VERTEX *final, int *pathSize)
     int i,*path;
     VERTEX *v = final;
     *pathSize = 0;
+    printf("TIME: %d\n",final->time);
     while(v!=NULL)
     {
         (*pathSize)++;          map[v->y][v->x] = '.';
@@ -453,14 +454,16 @@ int testQ()
 }
 int testPath()
 {
-    int width=50, height=40;
-    int time;
-    int index, scenario = 1; //to 6
+    int SIZE = 6;
+    int width, height;
+    int time,i,j,c;
+    int index, scenario = 0; //0 to 5
     FILE *fp;
-    int i,j,c;
+    int dlzka_cesty;
+
     fp = fopen("maps.txt","r");
 
-    for(index=0; index<6; index++)
+    for(index=0; index<SIZE; index++)
     {
         fscanf(fp,"%d %d %d",&height, &width, &time);
         char map[height][width];
@@ -469,11 +472,23 @@ int testPath()
         {
             for(j=0; j<width; j++)
             {
-                //c = fgetc(fp);
                 fscanf(fp,"%c ",&c);
-                printf("%c ", c);
+                if(isalpha(c))
+                    map[i][j] = c -32;
+                else
+                    map[i][j] = c;
             }
-            printf("\n");
+        }
+
+        if(index == scenario)
+        {
+            printf("%d %d %d\n",height, width, time);
+            char * mapa[height];
+            for(i=0; i<height;i++)
+            {
+                mapa[i] = map[i];
+            }
+            zachran_princezne(mapa, height, width, -1, &dlzka_cesty);
         }
     }
     fclose(fp);
