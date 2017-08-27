@@ -1,8 +1,8 @@
 5 15 23
-c c c c d h h h h h h h h n n
+c c c c d 1 h h h h h h h n n
 h n n n 0 n n n n n n n h n 0
 h n n n n n n n n n n n h n p
-h n n n n n n n n n n n h h p
+h n n n n n n n n n n n h 1 p
 g n n n n n n n n n n n n n p
 
 7 7 9

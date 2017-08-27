@@ -126,7 +126,7 @@ QUEUE_NODE popQ()
 /**Vrati cas prechodu daneho policka*/
 int getTime(char box)
 {
-    if(box == 'C' || box == 'D' || box == 'P' || box == 'Q' || box == 'R')
+    if(box == 'C' || box == 'D' || box == 'P' || box == 'Q' || box == 'R' || box == 'G')
         return 1;
     else if(box >= '0' && box <= '9')
         return 1;
@@ -136,29 +136,30 @@ int getTime(char box)
         return -666;
 }
 /**inicializacia globalnych premennych*/
-void initialize(VERTEX tab[2][2][2][2][height][width])
+void initialize(VERTEX tab[2][2][2][2][2][height][width])
 {
 // inicializacia tabulky
-    int d,p,q,r,x,y;
-    for(d=0; d<2; d++)
-        for(p=0; p<2; p++)
-            for(q=0; q<2; q++)
-                for(r=0; r<2; r++)
-                    for(y=0; y<height; y++)
-                        for(x=0; x<width; x++)
-                        {
-                            tab[d][p][q][r][y][x].time = INT_MAX;
-                            tab[d][p][q][r][y][x].isVisited = FALSE;
-                            tab[d][p][q][r][y][x].x = x;
-                            tab[d][p][q][r][y][x].y = y;
-                        }
+    int g,d,p,q,r,x,y;
+    for(g=0; g<2; g++)
+        for(d=0; d<2; d++)
+            for(p=0; p<2; p++)
+                for(q=0; q<2; q++)
+                    for(r=0; r<2; r++)
+                        for(y=0; y<height; y++)
+                            for(x=0; x<width; x++)
+                            {
+                                tab[g][d][p][q][r][y][x].time = INT_MAX;
+                                tab[g][d][p][q][r][y][x].isVisited = FALSE;
+                                tab[g][d][p][q][r][y][x].x = x;
+                                tab[g][d][p][q][r][y][x].y = y;
+                            }
 //min halda
     queue = (QUEUE_NODE*)calloc(sizeof(QUEUE_NODE),16*height*width*sizeof(QUEUE_NODE));
     queueCount=0;
     QUEUE_NODE src;
     src.d = src.p = src.q = src.r = src.x = src.y = 0;
-    tab[FALSE][FALSE][FALSE][FALSE][0][0].time = src.priority = getTime(map[0][0]);
-    tab[FALSE][FALSE][FALSE][FALSE][0][0].previous = NULL;
+    tab[FALSE][FALSE][FALSE][FALSE][FALSE][0][0].time = src.priority = getTime(map[0][0]);
+    tab[FALSE][FALSE][FALSE][FALSE][FALSE][0][0].previous = NULL;
     pushQ(src);
 
 // najdenie princezien a teleportov
@@ -190,15 +191,19 @@ void initialize(VERTEX tab[2][2][2][2][height][width])
     }
 }
 /**Relaxacia suseda*/
-VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERTEX tab[2][2][2][2][height][width])
+VERTEX* relaxVertex(VERTEX* from, int y, int x, int g, int d, int p, int q, int r, VERTEX tab[2][2][2][2][2][height][width])
 {
     if((y>=height) || (y<0) || (x>=width) || (x<0))//hranice
     {
         return NULL;
     }
-    if(tab[d][p][q][r][y][x].isVisited == TRUE || map[y][x]=='N')//no go
+    if(tab[g][d][p][q][r][y][x].isVisited == TRUE || map[y][x]=='N')//no go
     {
         return NULL;
+    }
+    if(map[y][x] == 'G')
+    {
+        g = TRUE;
     }
     if(d == TRUE && map[y][x] == 'P')
     {
@@ -214,13 +219,14 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
     }
     //Relaxacia
     int newTime = from->time + getTime(map[y][x]);
-    if(newTime < tab[d][p][q][r][y][x].time)
+    if(newTime < tab[g][d][p][q][r][y][x].time)
     {
-        tab[d][p][q][r][y][x].time = newTime;
-        tab[d][p][q][r][y][x].previous = from;
+        tab[g][d][p][q][r][y][x].time = newTime;
+        tab[g][d][p][q][r][y][x].previous = from;
         QUEUE_NODE neigh;
         neigh.x = x;
         neigh.y = y;
+        neigh.g = g;
         neigh.d = d;
         neigh.p = p;
         neigh.q = q;
@@ -232,12 +238,12 @@ VERTEX* relaxVertex(VERTEX* from, int y, int x, int d, int p, int q, int r, VERT
     if(d == TRUE && p == TRUE && q == TRUE && r == TRUE)
     {
         //printf("Nasiel princezne [%d,%d]!\n",x,y);
-        return &tab[d][p][q][r][y][x];
+        return &tab[g][d][p][q][r][y][x];
     }
     return NULL;
 }
 /** Vyriesenie teleportov*/
-void visitTeleports(VERTEX* from, QUEUE_NODE node, VERTEX tab[2][2][2][2][height][width])
+void visitTeleports(VERTEX* from, QUEUE_NODE node, VERTEX tab[2][2][2][2][2][height][width])
 {
     int index = map[node.y][node.x] - '0';
     TELEPORT *tele;
@@ -248,10 +254,10 @@ void visitTeleports(VERTEX* from, QUEUE_NODE node, VERTEX tab[2][2][2][2][height
         node.x = tele->x;
         node.y = tele->y;
         node.teleported = TRUE;
-        if(tab[node.d][node.p][node.q][node.r][node.y][node.x].isVisited == FALSE)
+        if(tab[node.g][node.d][node.p][node.q][node.r][node.y][node.x].isVisited == FALSE)
         {
-            tab[node.d][node.p][node.q][node.r][node.y][node.x].time = node.priority;
-            tab[node.d][node.p][node.q][node.r][node.y][node.x].previous = from;
+            tab[node.g][node.d][node.p][node.q][node.r][node.y][node.x].time = node.priority;
+            tab[node.g][node.d][node.p][node.q][node.r][node.y][node.x].previous = from;
             pushQ(node);
         }
         tele = tele->next;
@@ -263,7 +269,7 @@ int *generatePath(VERTEX *final, int *pathSize)
     int i,*path;
     VERTEX *v = final;
     *pathSize = 0;
-    printf("TIME: %d\n",final->time);
+    //printf("TIME: %d\n",final->time);
     while(v!=NULL)
     {
         (*pathSize)++;          map[v->y][v->x] = '.';
@@ -278,44 +284,45 @@ int *generatePath(VERTEX *final, int *pathSize)
     return path;
 }
 /**Navstivenie vrcholu*/
-int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][height][width], int *pathSize)
+int * visitVertex(QUEUE_NODE min, VERTEX tab[2][2][2][2][2][height][width], int *pathSize)
 {
-    int x,y,d,p,q,r,i,shift[]={-1,1};
+    int x,y,g,d,p,q,r,i,shift[]={-1,1};
     x = min.x;
     y = min.y;
+    g = min.g;
     d = min.d;
     p = min.p;
     q = min.q;
     r = min.r;
-    if(tab[d][p][q][r][y][x].isVisited == TRUE)  //je uz navstiveny     //je to dobre?
+    if(tab[g][d][p][q][r][y][x].isVisited == TRUE)  //je uz navstiveny     //je to dobre?
     {   printf("REPETE: [%d,%d]\t\t{%d,%d,%d,%d}\n",x,y,d,p,q,r);
         return NULL;
     }
-    tab[d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENE POLICKO
-    VERTEX *final, *from = &tab[d][p][q][r][y][x];
-    if(min.teleported == FALSE && map[y][x]>='0' && map[y][x]<='9')//NASIEL SOM TELEPORT
+    tab[g][d][p][q][r][y][x].isVisited = TRUE; // NAVSTIVENE POLICKO
+    VERTEX *final, *from = &tab[g][d][p][q][r][y][x];
+    if(g == TRUE && min.teleported == FALSE && map[y][x]>='0' && map[y][x]<='9')//NASIEL SOM TELEPORT
     {
-        //visitTeleports(from,min,tab);
+        visitTeleports(from,min,tab);
     }
     else if(map[y][x] == 'D' && d == FALSE)//NASIEL SOM DRAKA
     {
-        queueCount = 0;
+        //queueCount = 0;
         d = TRUE;
     }
     //relaxacia susedov
     for(i=0; i<2; i++)
     {
-        final = relaxVertex(from, y+shift[i],x,d,p,q,r,tab);
+        final = relaxVertex(from, y+shift[i],x,g,d,p,q,r,tab);
         if(final != NULL) return generatePath(final, pathSize);
-        final = relaxVertex(from, y,x+shift[i],d,p,q,r,tab);
+        final = relaxVertex(from, y,x+shift[i],g,d,p,q,r,tab);
         if(final != NULL) return generatePath(final, pathSize);
     }
     return NULL;
 }
 /** Uvolnenie globalnych premennych*/
-void terminate(VERTEX tab[2][2][2][2][height][width])
+void terminate(VERTEX tab[2][2][2][2][2][height][width])
 {
-    printMap();
+    //printMap();
     //printSimpleTab(tab,0,0,0,0);
     //printTeleports();
     free(queue);//Uvolnenie pamate
@@ -341,10 +348,10 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
     map = mapa;                 // mapa
 
     QUEUE_NODE min;
-    VERTEX tab[2][2][2][2][height][width];
+    VERTEX tab[2][2][2][2][2][height][width];
     int *path = NULL;
     initialize(tab);
-    printMap();
+    //printMap();
     while(path==NULL)
     {
         if(queueCount==0)
@@ -359,7 +366,7 @@ int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty)
     return path;
 }
 //**TEST**
-void printSimpleTab(VERTEX tab[2][2][2][2][height][width], int a, int b, int c, int d)    // VYTLACI TABULKU
+void printSimpleTab(VERTEX tab[2][2][2][2][2][height][width], int a, int b, int c, int d, int e)    // VYTLACI TABULKU
 {
     int x,y;
 
@@ -367,14 +374,14 @@ void printSimpleTab(VERTEX tab[2][2][2][2][height][width], int a, int b, int c, 
     {// vyska
         for(x=0; x<width; x++)
         {// sirka
-            (tab[a][b][c][d][y][x].time == INT_MAX)? printf("OO ") : printf("%2d ",tab[a][b][c][d][y][x].time );
-            //printf("'%d' ",tab[a][b][c][d][y][x].isVisited);
+            (tab[a][b][c][d][e][y][x].time == INT_MAX)? printf("OO ") : printf("%2d ",tab[a][b][c][d][e][y][x].time );
+            //printf("'%d' ",tab[a][b][c][d][e][y][x].isVisited);
         }
         printf("\n");
     }
     printf("\n");
 }
-void printCameFrom(VERTEX tab[2][2][2][2][height][width])    // VYTLACI TABULKU
+void printCameFrom(VERTEX tab[2][2][2][2][2][height][width])    // VYTLACI TABULKU
 {
     int x,y;
     VERTEX *previous = NULL;
@@ -382,7 +389,7 @@ void printCameFrom(VERTEX tab[2][2][2][2][height][width])    // VYTLACI TABULKU
     {// vyska
         for(x=0; x<width; x++)
         {// sirka
-            previous = tab[0][0][0][0][y][x].previous;
+            previous = tab[0][0][0][0][0][y][x].previous;
             (previous == NULL)? printf("[ NULL] ") : printf("[%2d,%2d] ",previous->x,previous->y);
         }
         printf("\n");
@@ -488,7 +495,11 @@ int testPath()
             {
                 mapa[i] = map[i];
             }
-            zachran_princezne(mapa, height, width, -1, &dlzka_cesty);
+            int *cesta = zachran_princezne(mapa, height, width, -1, &dlzka_cesty);
+            if(cesta==NULL) return 1;
+            for(i=0;i<dlzka_cesty;++i){
+                    printf("%d %d\n", cesta[i*2], cesta[i*2+1]);
+            }
         }
     }
     fclose(fp);
