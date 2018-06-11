@@ -68,7 +68,7 @@ v takto definovano stavovom priestore ho staci raz spustit
     * prechod mapov, najdenie teleportov = O(vyska_mapy * sirka_mapy)
 * Prioritny rad je implementovany ako binarna halda s vyskov log(n)
     * operacie pop() a push(x) maju preto zlozitost = O(log n)
-* Dijkstrov algoritmus v najhorsom prÌpade vlozi do priorineho radu a vyberie z neho vöetky vrcholy grafu.
+* Dijkstrov algoritmus v najhorsom pr√≠pade vlozi do priorineho radu a vyberie z neho v≈°etky vrcholy grafu.
     * zlozitost O(log n * vyska_mapy * sirka_mapy)
 
 **celkova zlozitost = O((64 * vyska_mapy * sirka_mapy) + pocet_teleportov)**
